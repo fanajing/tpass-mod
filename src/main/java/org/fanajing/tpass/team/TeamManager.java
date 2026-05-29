@@ -127,6 +127,22 @@ public class TeamManager {
         return new java.util.HashMap<>(teams);
     }
 
+    public static void clearAll() {
+        teams.clear();
+        playerTeamMap.clear();
+    }
+
+    public static void loadTeam(TeamData team) {
+        teams.put(team.name, team);
+        for (UUID member : team.getMembers()) {
+            playerTeamMap.put(member, team.name);
+        }
+    }
+
+    public static Map<UUID, ChatFormatting> getAllGlowColors() {
+        return new java.util.HashMap<>(glowColors);
+    }
+
     public static boolean setPvpEnabled(String teamName, boolean enabled) {
         TeamData team = teams.get(teamName);
         if (team == null) return false;

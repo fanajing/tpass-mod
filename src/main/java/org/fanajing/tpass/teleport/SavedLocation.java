@@ -20,4 +20,13 @@ public class SavedLocation {
         this.yRot = yRot;
         this.xRot = xRot;
     }
+
+    public SavedLocation(ResourceKey<Level> dimension, double x, double y, double z, float yRot, float xRot) {
+        this.dimension = dimension;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.yRot = yRot;
+        this.xRot = xRot;
+    }
 }

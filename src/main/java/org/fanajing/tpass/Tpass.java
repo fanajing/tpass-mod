@@ -21,12 +21,16 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.fanajing.tpass.team.TeamData;
 import org.fanajing.tpass.team.TeamManager;
+import org.fanajing.tpass.team.TeamStorage;
 import org.fanajing.tpass.teleport.TeleportManager;
 
+import java.nio.file.Paths;
 import java.util.UUID;
 
 @Mod("tpass")
@@ -716,6 +720,16 @@ public class Tpass {
                     })
                 )
         );
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerAboutToStartEvent event) {
+        TeamStorage.load(Paths.get("."));
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        TeamStorage.save(Paths.get("."));
     }
 
     @SubscribeEvent

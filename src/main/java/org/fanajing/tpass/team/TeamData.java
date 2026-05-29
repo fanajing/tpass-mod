@@ -58,6 +58,10 @@ public class TeamData {
         return pendingInvites.contains(player);
     }
 
+    public Set<UUID> getPendingInvitesInternal() {
+        return new HashSet<>(pendingInvites);
+    }
+
     public int getSize() {
         return members.size();
     }
