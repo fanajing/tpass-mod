@@ -365,6 +365,16 @@ public class Tpass {
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
+        // 移除原版 /team 命令，使用我们的
+        try {
+            java.lang.reflect.Field childrenField = com.mojang.brigadier.tree.CommandNode.class.getDeclaredField("children");
+            childrenField.setAccessible(true);
+            java.util.Map<String, ?> children = (java.util.Map<String, ?>) childrenField.get(event.getDispatcher().getRoot());
+            children.remove("team");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         event.getDispatcher().register(
             Commands.literal("tpa")
                 .requires(source -> source.getPlayer() != null)
@@ -538,6 +548,11 @@ public class Tpass {
         );
 
         event.getDispatcher().register(
+                buildTeamCommands()
+                        .requires(source -> source.getPlayer() != null)
+        );
+
+        event.getDispatcher().register(
             Commands.literal("tt")
                 .requires(source -> source.getPlayer() != null)
                 .executes(context -> {
@@ -568,10 +583,12 @@ public class Tpass {
                             String memberName = member != null ? member.getName().getString() : memberId.toString();
                             if (member != null && !memberId.equals(player.getUUID())) {
                                 Component memberBtn = Component.literal("  - " + memberName)
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpa " + memberName)));
+                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpa " + memberName)));
                                 player.sendSystemMessage(memberBtn);
                             } else {
-                                player.sendSystemMessage(Component.literal("  - " + memberName));
+                                Component memberGray = Component.literal("  - " + memberName)
+                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY));
+                                player.sendSystemMessage(memberGray);
                             }
                         }
 
