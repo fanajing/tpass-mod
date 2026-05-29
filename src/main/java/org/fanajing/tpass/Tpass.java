@@ -29,6 +29,7 @@ import org.fanajing.tpass.team.TeamData;
 import org.fanajing.tpass.team.TeamManager;
 import org.fanajing.tpass.team.TeamStorage;
 import org.fanajing.tpass.teleport.TeleportManager;
+import org.fanajing.tpass.FlightCardManager;
 
 import java.nio.file.Paths;
 import java.util.UUID;
@@ -541,6 +542,7 @@ public class Tpass {
                         player.sendSystemMessage(Component.literal("/tpass team info - 查看队伍信息"));
                         player.sendSystemMessage(Component.literal("/tpass team pvp - 设置队伍PVP"));
                         player.sendSystemMessage(Component.literal("/tpass team repository - 打开队伍共享末影箱"));
+                        player.sendSystemMessage(Component.literal("/flightcard - 使用创造飞行体验卡（飞行5分钟，可暂停，冷却20分钟）"));
                         return 1;
                     })
                 )
@@ -549,6 +551,16 @@ public class Tpass {
         event.getDispatcher().register(
             Commands.literal("tpass")
                 .then(buildTeamCommands())
+        );
+
+        event.getDispatcher().register(
+            Commands.literal("flightcard")
+                .requires(source -> source.getPlayer() != null)
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    FlightCardManager.useFlightCard(player);
+                    return 1;
+                })
         );
 
         event.getDispatcher().register(
@@ -738,15 +750,35 @@ public class Tpass {
     }
 
     @SubscribeEvent
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            // 玩家退出时清除飞行状态（不发送消息）
+            FlightCardManager.disableFlight(player, false);
+        }
+    }
+
+    @SubscribeEvent
     public void onDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             TeleportManager.saveLocation(player);
         }
     }
 
+    private int tickCounter = 0;
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        
+        // 更新飞行卡时间（每20 tick = 1秒）
+        tickCounter++;
+        if (tickCounter >= 20) {
+            tickCounter = 0;
+            for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                FlightCardManager.updateFlightTime(player);
+            }
+        }
+        
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             TeamData team = TeamManager.getPlayerTeam(player);
             Scoreboard scoreboard = player.getServer().getLevel(Level.OVERWORLD).getScoreboard();
