@@ -4,6 +4,27 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
 
+// ========================================
+// 多版本支持配置
+// ========================================
+// 本项目采用版本隔离架构，支持多个 Minecraft 版本
+// 
+// 要添加新版本支持：
+// 1. 在 src/main/java/org/fanajing/tpass/adapter/ 下创建新的适配器类
+//    例如：VersionAdapter_1_20.java (针对 1.20 版本)
+// 
+// 2. 在 VersionAdapterFactory.createAdapter() 中添加版本判断
+//    例如：
+//    if (mcVersion.startsWith("1.20")) {
+//        return new VersionAdapter_1_20();
+//    }
+// 
+// 3. 修改 gradle.properties 中的 minecraft_version 和 forge_version
+// 
+// 当前支持版本：1.21
+// 详见：ARCHITECTURE.md
+// ========================================
+
 
 group = mod_group_id
 version = mod_version

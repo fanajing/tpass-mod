@@ -2,159 +2,99 @@ package org.fanajing.tpass.team;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerPlayer;
+import org.fanajing.tpass.core.CoreTeamManager;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 队伍管理器（包装层）
+ * 委托给 CoreTeamManager 处理实际逻辑
+ * 保持向后兼容的 API
+ */
 public class TeamManager {
-    private static final Map<String, TeamData> teams = new ConcurrentHashMap<>();
-    private static final Map<UUID, String> playerTeamMap = new ConcurrentHashMap<>();
-    private static final Map<UUID, ChatFormatting> glowColors = new ConcurrentHashMap<>();
-    private static final Map<String, net.minecraft.world.SimpleContainer> teamChests = new ConcurrentHashMap<>();
 
     public static boolean createTeam(String name, ServerPlayer leader) {
-        if (teams.containsKey(name)) {
-            return false;
-        }
-        if (playerTeamMap.containsKey(leader.getUUID())) {
-            return false;
-        }
-        TeamData team = new TeamData(name, leader.getUUID());
-        teams.put(name, team);
-        playerTeamMap.put(leader.getUUID(), name);
-        return true;
+        return CoreTeamManager.createTeam(name, leader);
     }
 
     public static boolean invitePlayer(String teamName, UUID target) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        team.addPendingInvite(target);
-        return true;
+        return CoreTeamManager.invitePlayer(teamName, target);
     }
 
     public static boolean denyInvite(String teamName, UUID player) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        if (!team.isInvited(player)) return false;
-        team.removePendingInvite(player);
-        return true;
+        return CoreTeamManager.denyInvite(teamName, player);
     }
 
     public static boolean joinTeam(String teamName, ServerPlayer player) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        if (!team.isInvited(player.getUUID())) return false;
-        if (playerTeamMap.containsKey(player.getUUID())) return false;
-
-        team.addMember(player.getUUID());
-        team.removePendingInvite(player.getUUID());
-        playerTeamMap.put(player.getUUID(), teamName);
-        return true;
+        return CoreTeamManager.joinTeam(teamName, player);
     }
 
     public static boolean leaveTeam(ServerPlayer player) {
-        String teamName = playerTeamMap.get(player.getUUID());
-        if (teamName == null) return false;
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-
-        team.removeMember(player.getUUID());
-        playerTeamMap.remove(player.getUUID());
-
-        if (team.leader.equals(player.getUUID())) {
-            for (UUID member : team.getMembers()) {
-                playerTeamMap.remove(member);
-            }
-            teams.remove(teamName);
-        }
-
-        return true;
+        return CoreTeamManager.leaveTeam(player);
     }
 
     public static boolean kickPlayer(String teamName, UUID target, ServerPlayer kicker) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        if (!team.leader.equals(kicker.getUUID())) return false;
-
-        team.removeMember(target);
-        playerTeamMap.remove(target);
-        return true;
+        return CoreTeamManager.kickPlayer(teamName, target, kicker);
     }
 
     public static boolean disbandTeam(String teamName, ServerPlayer leader) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        if (!team.leader.equals(leader.getUUID())) return false;
-
-        for (UUID member : team.getMembers()) {
-            playerTeamMap.remove(member);
-        }
-        teams.remove(teamName);
-        return true;
+        return CoreTeamManager.disbandTeam(teamName, leader);
     }
 
     public static TeamData getPlayerTeam(ServerPlayer player) {
-        String teamName = playerTeamMap.get(player.getUUID());
-        return teamName != null ? teams.get(teamName) : null;
+        return CoreTeamManager.getPlayerTeam(player);
     }
 
     public static TeamData getTeam(String name) {
-        return teams.get(name);
+        return CoreTeamManager.getTeam(name);
     }
 
     public static boolean isInTeam(ServerPlayer player) {
-        return playerTeamMap.containsKey(player.getUUID());
+        return CoreTeamManager.isInTeam(player);
     }
 
     public static String getTeamName(ServerPlayer player) {
-        return playerTeamMap.get(player.getUUID());
+        return CoreTeamManager.getTeamName(player);
     }
 
     public static void setGlowColor(UUID player, ChatFormatting color) {
-        glowColors.put(player, color);
+        CoreTeamManager.setGlowColor(player, color);
     }
 
     public static ChatFormatting getGlowColor(UUID player) {
-        return glowColors.getOrDefault(player, ChatFormatting.WHITE);
+        return CoreTeamManager.getGlowColor(player);
     }
 
     public static void removeGlowColor(UUID player) {
-        glowColors.remove(player);
+        CoreTeamManager.removeGlowColor(player);
     }
 
     public static Map<String, TeamData> getAllTeams() {
-        return new java.util.HashMap<>(teams);
+        return CoreTeamManager.getAllTeams();
     }
 
     public static void clearAll() {
-        teams.clear();
-        playerTeamMap.clear();
+        CoreTeamManager.clearAll();
     }
 
     public static void loadTeam(TeamData team) {
-        teams.put(team.name, team);
-        for (UUID member : team.getMembers()) {
-            playerTeamMap.put(member, team.name);
-        }
+        CoreTeamManager.loadTeam(team);
     }
 
     public static Map<UUID, ChatFormatting> getAllGlowColors() {
-        return new java.util.HashMap<>(glowColors);
+        return CoreTeamManager.getAllGlowColors();
     }
 
     public static boolean setPvpEnabled(String teamName, boolean enabled) {
-        TeamData team = teams.get(teamName);
-        if (team == null) return false;
-        team.setPvpEnabled(enabled);
-        return true;
+        return CoreTeamManager.setPvpEnabled(teamName, enabled);
     }
 
     public static net.minecraft.world.SimpleContainer getTeamChest(String teamName) {
-        return teamChests.computeIfAbsent(teamName, k -> new net.minecraft.world.SimpleContainer(27));
+        return CoreTeamManager.getTeamChest(teamName);
     }
 
     public static void removeTeamChest(String teamName) {
-        teamChests.remove(teamName);
+        CoreTeamManager.removeTeamChest(teamName);
     }
 }

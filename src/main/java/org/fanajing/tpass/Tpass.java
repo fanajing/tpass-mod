@@ -25,6 +25,8 @@ import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.fanajing.tpass.adapter.VersionAdapter;
+import org.fanajing.tpass.adapter.VersionAdapterFactory;
 import org.fanajing.tpass.team.TeamData;
 import org.fanajing.tpass.team.TeamManager;
 import org.fanajing.tpass.team.TeamStorage;
@@ -36,6 +38,8 @@ import java.util.UUID;
 
 @Mod("tpass")
 public class Tpass {
+    
+    private static final VersionAdapter adapter = VersionAdapterFactory.getAdapter();
 
     public Tpass() {
         MinecraftForge.EVENT_BUS.register(this);
@@ -78,15 +82,20 @@ public class Tpass {
                         TeamManager.invitePlayer(team.name, target.getUUID());
                         player.sendSystemMessage(Component.literal("已邀请 " + target.getName().getString() + " 加入队伍"));
 
-                        Component acceptBtn = Component.literal("[接受]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team accept " + team.name)));
-                        Component denyBtn = Component.literal("[拒绝]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team deny " + team.name)));
+                        Component acceptBtn = adapter.styleComponent(
+                                adapter.createTextComponent("[接受]"),
+                                ChatFormatting.GREEN,
+                                new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team accept " + team.name));
+                        Component denyBtn = adapter.styleComponent(
+                                adapter.createTextComponent("[拒绝]"),
+                                ChatFormatting.RED,
+                                new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team deny " + team.name));
 
-                        target.sendSystemMessage(Component.literal("你收到了加入队伍 [" + team.name + "] 的邀请 ")
-                                .append(acceptBtn)
-                                .append(" ")
-                                .append(denyBtn));
+                        adapter.sendSystemMessage(target, adapter.appendComponents(
+                                adapter.createTextComponent("你收到了加入队伍 [" + team.name + "] 的邀请 "),
+                                acceptBtn,
+                                adapter.createTextComponent(" "),
+                                denyBtn));
                         return 1;
                     })
                 )
@@ -262,11 +271,19 @@ public class Tpass {
                         return 0;
                     }
                     boolean current = team.isPvpEnabled();
-                    Component onBtn = Component.literal("[开启]")
-                            .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team pvp true")));
-                    Component offBtn = Component.literal("[关闭]")
-                            .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team pvp false")));
-                    player.sendSystemMessage(Component.literal("当前PVP状态: " + (current ? "开启" : "关闭") + " ").append(onBtn).append(" ").append(offBtn));
+                    Component onBtn = adapter.styleComponent(
+                            adapter.createTextComponent("[开启]"),
+                            ChatFormatting.GREEN,
+                            new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team pvp true"));
+                    Component offBtn = adapter.styleComponent(
+                            adapter.createTextComponent("[关闭]"),
+                            ChatFormatting.RED,
+                            new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team pvp false"));
+                    adapter.sendSystemMessage(player, adapter.appendComponents(
+                            adapter.createTextComponent("当前PVP状态: " + (current ? "开启" : "关闭") + " "),
+                            onBtn,
+                            adapter.createTextComponent(" "),
+                            offBtn));
                     return 1;
                 })
                 .then(Commands.argument("value", StringArgumentType.word())
@@ -304,9 +321,7 @@ public class Tpass {
                         return 0;
                     }
                     net.minecraft.world.SimpleContainer container = TeamManager.getTeamChest(team.name);
-                    player.openMenu(new SimpleMenuProvider((id, inv, p) ->
-                            ChestMenu.threeRows(id, inv, container),
-                            Component.literal("队伍共享末影箱 - " + team.name)));
+                    adapter.openChestGui(player, adapter.createTextComponent("队伍共享末影箱 - " + team.name), container, 3);
                     return 1;
                 })
             )
@@ -336,13 +351,15 @@ public class Tpass {
                         ChatFormatting.RED, ChatFormatting.LIGHT_PURPLE, ChatFormatting.YELLOW,
                         ChatFormatting.WHITE
                     };
-                    net.minecraft.network.chat.MutableComponent message = Component.literal("选择发光颜色：");
+                    Component message = adapter.createTextComponent("选择发光颜色：");
                     for (ChatFormatting color : colors) {
-                        Component colorBtn = Component.literal("■")
-                                .withStyle(Style.EMPTY.withColor(color).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team color " + color.name())));
-                        message = message.append(Component.literal(" ")).append(colorBtn);
+                        Component colorBtn = adapter.styleComponent(
+                                adapter.createTextComponent("■"),
+                                color,
+                                new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team color " + color.name()));
+                        message = message.copy().append(adapter.createTextComponent(" ")).append(colorBtn);
                     }
-                    player.sendSystemMessage(message);
+                    adapter.sendSystemMessage(player, message);
                     return 1;
                 })
                 .then(Commands.argument("color", StringArgumentType.word())
@@ -361,7 +378,9 @@ public class Tpass {
                             return 0;
                         }
                         TeamManager.setGlowColor(player.getUUID(), color);
-                        player.sendSystemMessage(Component.literal("发光颜色已设置为 ").append(Component.literal("■").withStyle(Style.EMPTY.withColor(color))));
+                        adapter.sendSystemMessage(player, adapter.appendComponents(
+                                adapter.createTextComponent("发光颜色已设置为 "),
+                                adapter.styleComponent(adapter.createTextComponent("■"), color, null)));
                         return 1;
                     })
                 )
@@ -782,33 +801,21 @@ public class Tpass {
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             TeamData team = TeamManager.getPlayerTeam(player);
             Scoreboard scoreboard = player.getServer().getLevel(Level.OVERWORLD).getScoreboard();
-            String glowTeamName = "tpass_glow_" + player.getUUID();
+            String glowTeamName = "tpass_glow_" + adapter.getPlayerUUID(player);
 
             if (team == null) {
-                PlayerTeam glowTeam = scoreboard.getPlayerTeam(player.getName().getString());
-                if (glowTeam != null && glowTeam.getName().startsWith("tpass_glow_")) {
-                    scoreboard.removePlayerFromTeam(player.getName().getString(), glowTeam);
-                }
+                adapter.removePlayerFromGlowTeam(scoreboard, adapter.getPlayerName(player).getString(), glowTeamName);
                 continue;
             }
 
-            PlayerTeam glowTeam = scoreboard.getPlayerTeam(player.getName().getString());
-            if (glowTeam == null || !glowTeam.getName().equals(glowTeamName)) {
-                if (glowTeam != null) {
-                    scoreboard.removePlayerFromTeam(player.getName().getString(), glowTeam);
-                }
-                glowTeam = scoreboard.addPlayerTeam(glowTeamName);
-            }
-            ChatFormatting color = TeamManager.getGlowColor(player.getUUID());
-            glowTeam.setColor(color);
-            scoreboard.addPlayerToTeam(player.getName().getString(), glowTeam);
+            ChatFormatting color = TeamManager.getGlowColor(adapter.getPlayerUUID(player));
+            adapter.setupGlowTeam(scoreboard, player, glowTeamName, color);
 
             for (UUID memberId : team.getMembers()) {
-                if (memberId.equals(player.getUUID())) continue;
+                if (memberId.equals(adapter.getPlayerUUID(player))) continue;
                 ServerPlayer member = event.getServer().getPlayerList().getPlayer(memberId);
                 if (member != null) {
-                    member.addEffect(new MobEffectInstance(
-                        MobEffects.GLOWING, 40, 0, false, false, false));
+                    adapter.addGlowingEffect(member, 40);
                 }
             }
         }
