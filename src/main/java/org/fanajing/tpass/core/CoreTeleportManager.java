@@ -234,4 +234,19 @@ public class CoreTeleportManager {
             adapter.sendSystemMessage(player, warpBtn);
         }
     }
+    
+    public static void listHomes(ServerPlayer player) {
+        UUID playerId = adapter.getPlayerUUID(player);
+        Map<String, SavedLocation> playerHomes = homes.get(playerId);
+        if (playerHomes == null || playerHomes.isEmpty()) {
+            adapter.sendSystemMessage(player, adapter.createTextComponent("你没有设置任何传送点"));
+            return;
+        }
+        adapter.sendSystemMessage(player, adapter.createTextComponent("=== 我的传送点 ==="));
+        for (String homeName : playerHomes.keySet()) {
+            Component homeBtn = adapter.createButtonComponent("[ " + homeName + " ]", ChatFormatting.AQUA, "/home " + homeName);
+            adapter.sendSystemMessage(player, homeBtn);
+        }
+        adapter.sendSystemMessage(player, adapter.createTextComponent("=================="));
+    }
 }

@@ -48,7 +48,7 @@ public class Tpass {
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> buildTeamCommands() {
         return Commands.literal("team")
             .then(Commands.literal("create")
-                .then(Commands.argument("name", StringArgumentType.word())
+                .then(Commands.argument("name", StringArgumentType.string())
                     .executes(context -> {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         String name = StringArgumentType.getString(context, "name");
@@ -101,7 +101,7 @@ public class Tpass {
                 )
             )
             .then(Commands.literal("join")
-                .then(Commands.argument("name", StringArgumentType.word())
+                .then(Commands.argument("name", StringArgumentType.string())
                     .executes(context -> {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         String name = StringArgumentType.getString(context, "name");
@@ -121,7 +121,7 @@ public class Tpass {
                 )
             )
             .then(Commands.literal("accept")
-                .then(Commands.argument("name", StringArgumentType.word())
+                .then(Commands.argument("name", StringArgumentType.string())
                     .executes(context -> {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         String name = StringArgumentType.getString(context, "name");
@@ -141,7 +141,7 @@ public class Tpass {
                 )
             )
             .then(Commands.literal("deny")
-                .then(Commands.argument("name", StringArgumentType.word())
+                .then(Commands.argument("name", StringArgumentType.string())
                     .executes(context -> {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         String name = StringArgumentType.getString(context, "name");
@@ -325,21 +325,6 @@ public class Tpass {
                     return 1;
                 })
             )
-            .then(Commands.literal("r")
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    TeamData team = TeamManager.getPlayerTeam(player);
-                    if (team == null) {
-                        player.sendSystemMessage(Component.literal("你不在任何队伍中"));
-                        return 0;
-                    }
-                    net.minecraft.world.SimpleContainer container = TeamManager.getTeamChest(team.name);
-                    player.openMenu(new SimpleMenuProvider((id, inv, p) ->
-                            ChestMenu.threeRows(id, inv, container),
-                            Component.literal("队伍共享末影箱 - " + team.name)));
-                    return 1;
-                })
-            )
             .then(Commands.literal("color")
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
@@ -485,6 +470,16 @@ public class Tpass {
         );
 
         event.getDispatcher().register(
+            Commands.literal("homes")
+                .requires(source -> source.getPlayer() != null)
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    TeleportManager.listHomes(player);
+                    return 1;
+                })
+        );
+
+        event.getDispatcher().register(
             Commands.literal("rehome")
                 .requires(source -> source.getPlayer() != null)
                 .then(Commands.argument("name", StringArgumentType.word())
@@ -546,6 +541,7 @@ public class Tpass {
                         player.sendSystemMessage(Component.literal("/back - 返回上一个位置/死亡点"));
                         player.sendSystemMessage(Component.literal("/sethome <名称> - 设置传送点（最多5个）"));
                         player.sendSystemMessage(Component.literal("/home <名称> - 传送到指定传送点"));
+                        player.sendSystemMessage(Component.literal("/homes - 查看所有传送点列表"));
                         player.sendSystemMessage(Component.literal("/rehome <名称> - 删除指定传送点"));
                         player.sendSystemMessage(Component.literal("/setwarp <名称> - 设置队伍传送点"));
                         player.sendSystemMessage(Component.literal("/warp <名称> - 传送到队伍传送点"));
@@ -594,65 +590,54 @@ public class Tpass {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     TeamData team = TeamManager.getPlayerTeam(player);
                     if (team == null) {
-                        Component createBtn = Component.literal("[创建队伍]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tpass team create ")));
-                        Component joinBtn = Component.literal("[申请加入队伍]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt joinlist")));
+                        Component createBtn = adapter.createSuggestCommandButton("[创建队伍]", ChatFormatting.GREEN, "/tpass team create ");
+                        Component joinBtn = adapter.createButtonComponent("[申请加入队伍]", ChatFormatting.AQUA, "/tt joinlist");
 
-                        player.sendSystemMessage(Component.literal("=== 队伍菜单 ==="));
-                        player.sendSystemMessage(createBtn);
-                        player.sendSystemMessage(joinBtn);
-                        player.sendSystemMessage(Component.literal("=================="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=== 队伍菜单 ==="));
+                        adapter.sendSystemMessage(player, createBtn);
+                        adapter.sendSystemMessage(player, joinBtn);
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=================="));
                     } else {
                         String leaderName = player.getServer().getPlayerList().getPlayer(team.leader) != null
                                 ? player.getServer().getPlayerList().getPlayer(team.leader).getName().getString()
                                 : team.leader.toString();
 
-                        player.sendSystemMessage(Component.literal("=== 队伍菜单 ==="));
-                        player.sendSystemMessage(Component.literal("队伍名: " + team.name));
-                        player.sendSystemMessage(Component.literal("队长: " + leaderName));
-                        player.sendSystemMessage(Component.literal("PVP: " + (team.isPvpEnabled() ? "开启" : "关闭")));
-                        player.sendSystemMessage(Component.literal("队员:"));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=== 队伍菜单 ==="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("队伍名: " + team.name));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("队长: " + leaderName));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("PVP: " + (team.isPvpEnabled() ? "开启" : "关闭")));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("队员:"));
                         for (UUID memberId : team.getMembers()) {
                             ServerPlayer member = player.getServer().getPlayerList().getPlayer(memberId);
                             String memberName = member != null ? member.getName().getString() : memberId.toString();
                             if (member != null && !memberId.equals(player.getUUID())) {
-                                Component memberBtn = Component.literal("  - " + memberName)
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpa " + memberName)));
-                                player.sendSystemMessage(memberBtn);
+                                Component memberBtn = adapter.createButtonComponent("  - " + memberName, ChatFormatting.GREEN, "/tpa " + memberName);
+                                adapter.sendSystemMessage(player, memberBtn);
                             } else {
-                                Component memberGray = Component.literal("  - " + memberName)
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY));
-                                player.sendSystemMessage(memberGray);
+                                Component memberGray = adapter.styleComponent(adapter.createTextComponent("  - " + memberName), ChatFormatting.GRAY, null);
+                                adapter.sendSystemMessage(player, memberGray);
                             }
                         }
 
-                        Component inviteBtn = Component.literal("[邀请玩家]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tpass team invite ")));
+                        Component inviteBtn = adapter.createSuggestCommandButton("[邀请玩家]", ChatFormatting.GREEN, "/tpass team invite ");
                         boolean pvpEnabled = team.isPvpEnabled();
                         ChatFormatting pvpColor = pvpEnabled ? ChatFormatting.RED : ChatFormatting.GREEN;
                         String pvpCmd = pvpEnabled ? "/tpass team pvp false" : "/tpass team pvp true";
                         String pvpText = pvpEnabled ? "[pvp开启]" : "[pvp关闭]";
-                        Component pvpBtn = Component.literal(pvpText)
-                                .withStyle(Style.EMPTY.withColor(pvpColor).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, pvpCmd)));
-                        Component repoBtn = Component.literal("[队伍仓库]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team repository")));
-                        player.sendSystemMessage(inviteBtn.copy().append(Component.literal(" ")).append(pvpBtn).append(Component.literal(" ")).append(repoBtn));
+                        Component pvpBtn = adapter.createButtonComponent(pvpText, pvpColor, pvpCmd);
+                        Component repoBtn = adapter.createButtonComponent("[队伍仓库]", ChatFormatting.GOLD, "/tpass team repository");
+                        adapter.sendSystemMessage(player, adapter.appendComponents(inviteBtn, adapter.createTextComponent(" "), pvpBtn, adapter.createTextComponent(" "), repoBtn));
 
-                        Component leaveBtn = Component.literal("[离开队伍]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt leaveconfirm")));
-                        Component disbandBtn = Component.literal("[解散队伍]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt disbandconfirm")));
-                        player.sendSystemMessage(leaveBtn.copy().append(Component.literal(" ")).append(disbandBtn));
+                        Component leaveBtn = adapter.createButtonComponent("[离开队伍]", ChatFormatting.RED, "/tt leaveconfirm");
+                        Component disbandBtn = adapter.createButtonComponent("[解散队伍]", ChatFormatting.DARK_RED, "/tt disbandconfirm");
+                        adapter.sendSystemMessage(player, adapter.appendComponents(leaveBtn, adapter.createTextComponent(" "), disbandBtn));
 
-                        Component warpBtn = Component.literal("[队伍传送点]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.LIGHT_PURPLE).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt warplist")));
-                        player.sendSystemMessage(warpBtn);
+                        Component warpBtn = adapter.createButtonComponent("[队伍传送点]", ChatFormatting.LIGHT_PURPLE, "/tt warplist");
+                        adapter.sendSystemMessage(player, warpBtn);
 
-                        player.sendSystemMessage(Component.literal("=================="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=================="));
 
-                        player.sendSystemMessage(Component.literal("发光颜色:"));
-                        net.minecraft.network.chat.MutableComponent colorLine = Component.literal("");
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("发光颜色:"));
                         ChatFormatting[] colors = {
                             ChatFormatting.BLACK, ChatFormatting.DARK_BLUE, ChatFormatting.DARK_GREEN,
                             ChatFormatting.DARK_AQUA, ChatFormatting.DARK_RED, ChatFormatting.DARK_PURPLE,
@@ -661,31 +646,26 @@ public class Tpass {
                             ChatFormatting.RED, ChatFormatting.LIGHT_PURPLE, ChatFormatting.YELLOW,
                             ChatFormatting.WHITE
                         };
-                        for (ChatFormatting color : colors) {
-                            Component colorBlock = Component.literal("■")
-                                    .withStyle(Style.EMPTY.withColor(color).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team color " + color.name())));
-                            colorLine = colorLine.append(colorBlock).append(Component.literal(" "));
-                        }
-                        player.sendSystemMessage(colorLine);
+                        Component colorLine = adapter.createColorPicker(colors, "/tpass team color ");
+                        adapter.sendSystemMessage(player, colorLine);
                     }
                     return 1;
                 })
                 .then(Commands.literal("joinlist")
                     .executes(context -> {
                         ServerPlayer player = context.getSource().getPlayerOrException();
-                        player.sendSystemMessage(Component.literal("=== 队伍菜单 ==="));
-                        player.sendSystemMessage(Component.literal("请选择要加入的队伍:"));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=== 队伍菜单 ==="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("请选择要加入的队伍:"));
                         java.util.Map<String, TeamData> allTeams = TeamManager.getAllTeams();
                         if (allTeams.isEmpty()) {
-                            player.sendSystemMessage(Component.literal("当前没有队伍"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("当前没有队伍"));
                         } else {
                             for (java.util.Map.Entry<String, TeamData> entry : allTeams.entrySet()) {
-                                Component teamBtn = Component.literal("[" + entry.getKey() + "]")
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team join " + entry.getKey())));
-                                player.sendSystemMessage(teamBtn);
+                                Component teamBtn = adapter.createButtonComponent("[" + entry.getKey() + "]", ChatFormatting.AQUA, "/tpass team join " + entry.getKey());
+                                adapter.sendSystemMessage(player, teamBtn);
                             }
                         }
-                        player.sendSystemMessage(Component.literal("=================="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=================="));
                         return 1;
                     })
                 )
@@ -694,15 +674,13 @@ public class Tpass {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         TeamData team = TeamManager.getPlayerTeam(player);
                         if (team == null) {
-                            player.sendSystemMessage(Component.literal("你不在任何队伍中"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("你不在任何队伍中"));
                             return 0;
                         }
-                        Component confirmBtn = Component.literal("[确认离开]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team leave")));
-                        Component cancelBtn = Component.literal("[取消]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt")));
-                        player.sendSystemMessage(Component.literal("确定要离开队伍吗？"));
-                        player.sendSystemMessage(confirmBtn.copy().append(Component.literal(" ")).append(cancelBtn));
+                        Component confirmBtn = adapter.createButtonComponent("[确认离开]", ChatFormatting.RED, "/tpass team leave");
+                        Component cancelBtn = adapter.createButtonComponent("[取消]", ChatFormatting.GREEN, "/tt");
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("确定要离开队伍吗？"));
+                        adapter.sendSystemMessage(player, adapter.appendComponents(confirmBtn, adapter.createTextComponent(" "), cancelBtn));
                         return 1;
                     })
                 )
@@ -711,19 +689,17 @@ public class Tpass {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         TeamData team = TeamManager.getPlayerTeam(player);
                         if (team == null) {
-                            player.sendSystemMessage(Component.literal("你不在任何队伍中"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("你不在任何队伍中"));
                             return 0;
                         }
                         if (!team.leader.equals(player.getUUID())) {
-                            player.sendSystemMessage(Component.literal("只有队长可以解散队伍"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("只有队长可以解散队伍"));
                             return 0;
                         }
-                        Component confirmBtn = Component.literal("[确认解散]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpass team disband")));
-                        Component cancelBtn = Component.literal("[取消]")
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tt")));
-                        player.sendSystemMessage(Component.literal("确定要解散队伍吗？"));
-                        player.sendSystemMessage(confirmBtn.copy().append(Component.literal(" ")).append(cancelBtn));
+                        Component confirmBtn = adapter.createButtonComponent("[确认解散]", ChatFormatting.RED, "/tpass team disband");
+                        Component cancelBtn = adapter.createButtonComponent("[取消]", ChatFormatting.GREEN, "/tt");
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("确定要解散队伍吗？"));
+                        adapter.sendSystemMessage(player, adapter.appendComponents(confirmBtn, adapter.createTextComponent(" "), cancelBtn));
                         return 1;
                     })
                 )
@@ -732,21 +708,20 @@ public class Tpass {
                         ServerPlayer player = context.getSource().getPlayerOrException();
                         TeamData team = TeamManager.getPlayerTeam(player);
                         if (team == null) {
-                            player.sendSystemMessage(Component.literal("你不在任何队伍中"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("你不在任何队伍中"));
                             return 0;
                         }
-                        player.sendSystemMessage(Component.literal("=== warps ==="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=== warps ==="));
                         var warps = team.getWarps();
                         if (warps.isEmpty()) {
-                            player.sendSystemMessage(Component.literal("当前队伍没有设置任何传送点"));
+                            adapter.sendSystemMessage(player, adapter.createTextComponent("当前队伍没有设置任何传送点"));
                         } else {
                             for (String warpName : warps.keySet()) {
-                                Component wBtn = Component.literal("[ " + warpName + " ]")
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/warp " + warpName)));
-                                player.sendSystemMessage(wBtn);
+                                Component wBtn = adapter.createButtonComponent("[ " + warpName + " ]", ChatFormatting.AQUA, "/warp " + warpName);
+                                adapter.sendSystemMessage(player, wBtn);
                             }
                         }
-                        player.sendSystemMessage(Component.literal("=================="));
+                        adapter.sendSystemMessage(player, adapter.createTextComponent("=================="));
                         return 1;
                     })
                 )

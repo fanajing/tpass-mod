@@ -145,6 +145,39 @@ public class VersionAdapter_1_21 implements VersionAdapter {
             title));
     }
     
+    @Override
+    public Component createButtonComponent(String text, ChatFormatting color, String command) {
+        return Component.literal(text)
+                .withStyle(net.minecraft.network.chat.Style.EMPTY
+                        .withColor(color)
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command)));
+    }
+    
+    @Override
+    public Component createSuggestCommandButton(String text, ChatFormatting color, String commandPrefix) {
+        return Component.literal(text)
+                .withStyle(net.minecraft.network.chat.Style.EMPTY
+                        .withColor(color)
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandPrefix)));
+    }
+    
+    @Override
+    public Component createColorPicker(ChatFormatting[] colors, String commandPrefix) {
+        net.minecraft.network.chat.MutableComponent result = Component.literal("");
+        for (int i = 0; i < colors.length; i++) {
+            ChatFormatting color = colors[i];
+            Component colorBlock = Component.literal("■")
+                    .withStyle(net.minecraft.network.chat.Style.EMPTY
+                            .withColor(color)
+                            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, commandPrefix + color.name())));
+            result = result.append(colorBlock);
+            if (i < colors.length - 1) {
+                result = result.append(Component.literal(" "));
+            }
+        }
+        return result;
+    }
+    
     // ==================== 飞行能力相关 ====================
     
     @Override

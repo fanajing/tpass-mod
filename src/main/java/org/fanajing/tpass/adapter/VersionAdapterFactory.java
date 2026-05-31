@@ -26,22 +26,23 @@ public class VersionAdapterFactory {
      */
     private static VersionAdapter createAdapter() {
         // 检测 Minecraft 版本并返回对应的适配器
-        // 目前只支持 1.21，后续可以添加更多版本
         
         String mcVersion = getMinecraftVersion();
+        System.out.println("[TPass] 检测到 Minecraft 版本: " + mcVersion);
         
         // 可以根据版本号选择不同的适配器
         if (mcVersion.startsWith("1.21")) {
+            System.out.println("[TPass] 使用 1.21 版本适配器");
             return new VersionAdapter_1_21();
         }
         
-        // 默认使用 1.21 适配器
         // 未来可以在这里添加更多版本的判断
         // else if (mcVersion.startsWith("1.20")) {
+        //     System.out.println("[TPass] 使用 1.20 版本适配器");
         //     return new VersionAdapter_1_20();
         // }
         
-        throw new RuntimeException("不支持的 Minecraft 版本: " + mcVersion);
+        throw new RuntimeException("不支持的 Minecraft 版本: " + mcVersion + "。当前支持的版本: 1.21");
     }
     
     /**
@@ -66,9 +67,10 @@ public class VersionAdapterFactory {
                 mcVersionField.setAccessible(true);
                 return (String) mcVersionField.get(null);
             } catch (Exception ex) {
-                // 最后的备选方案：硬编码默认版本
-                System.err.println("无法检测 Minecraft 版本，使用默认版本 1.21");
-                return "1.21";
+                // 所有方法都失败，抛出异常
+                System.err.println("[TPass] 无法检测 Minecraft 版本！");
+                e.printStackTrace();
+                throw new RuntimeException("无法检测 Minecraft 版本，请检查 Forge 是否正确加载", ex);
             }
         }
     }

@@ -139,6 +139,32 @@ public interface VersionAdapter {
      */
     void openChestGui(ServerPlayer player, Component title, net.minecraft.world.Container inventory, int rows);
     
+    /**
+     * 创建带点击事件的按钮组件（用于菜单）
+     * @param text 按钮文本
+     * @param color 颜色
+     * @param command 点击执行的命令
+     * @return 按钮组件
+     */
+    Component createButtonComponent(String text, ChatFormatting color, String command);
+    
+    /**
+     * 创建建议命令的按钮组件（打开聊天框并预填充命令，等待用户输入）
+     * @param text 按钮文本
+     * @param color 颜色
+     * @param commandPrefix 命令前缀（会在聊天框中预填充）
+     * @return 按钮组件
+     */
+    Component createSuggestCommandButton(String text, ChatFormatting color, String commandPrefix);
+    
+    /**
+     * 创建颜色选择器组件
+     * @param colors 颜色数组
+     * @param commandPrefix 命令前缀（如 "/tpass team color "）
+     * @return 颜色选择器组件
+     */
+    Component createColorPicker(ChatFormatting[] colors, String commandPrefix);
+    
     // ==================== 飞行能力相关 ====================
     
     /**

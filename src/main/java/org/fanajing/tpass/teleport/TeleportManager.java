@@ -53,4 +53,8 @@ public class TeleportManager {
     public static void listTeamWarps(ServerPlayer player) {
         CoreTeleportManager.listTeamWarps(player);
     }
+    
+    public static void listHomes(ServerPlayer player) {
+        CoreTeleportManager.listHomes(player);
+    }
 }
